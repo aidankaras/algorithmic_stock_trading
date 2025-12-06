@@ -57,12 +57,6 @@ To validate the model in a live environment without financial risk, I am conduct
    ```bash
    pip install -r requirements.txt
 
-Run the Notebook:
-Execute stock_classifier.ipynb to retrain the model.
-Get Live Prediction:
-Run the final cell to get today's signal:
-predict_live("TICKER", model)
-Disclaimer: This project is for educational and research purposes only. It does not constitute financial advice.
 
 1.  **Run the Notebook:** Execute stock_classifier.ipynb to retrain the model.
 2.  **Get Live Prediction:** Run the final cell to get today's signal - predict_live("TICKER", model)
