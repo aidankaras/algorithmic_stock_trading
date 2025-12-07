@@ -1,63 +1,97 @@
-# Algorithmic Trading with Random Forest
+# Advanced Stock Trend Classifier (V2)
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Scikit-Learn](https://img.shields.io/badge/Library-Scikit--Learn-orange)
+![Pandas](https://img.shields.io/badge/Library-Pandas-150458)
+![Excel](https://img.shields.io/badge/Tool-Excel_Validation-green)
 
 ## Project Overview
-This project is a Machine Learning pipeline designed to predict short-term stock price movements (5-day horizon) for S&P 500 equities. Unlike traditional technical analysis, this approach utilizes a **Random Forest Classifier** to identify non-linear relationships between momentum indicators and future price action.
+This project is an advanced Machine Learning pipeline designed to predict short-term market direction. Unlike basic models that rely on raw prices, this V2 iteration focuses on **Statistical Stationarity**, **Dynamic Volatility Targeting**, and **Regime-Adaptive Validation**.
 
-I'm validating this model through a **Walk-Forward Paper Trading** simulation to ensure robustness against market volatility before deployment.
+The project concludes with a **30-Day Paper Trading experiment**, where model predictions were validated in a live environment using an Excel ledger to audit performance against real-time market data.
 
-## Technical Architecture
+## Key Data Science Concepts
 
-### 1. ETL Pipeline (Extract, Transform, Load)
-*   **Data Source:** `yfinance` API (Yahoo Finance).
-*   **Preprocessing:** 
-    *   Automated cleaning of zero-volume trading days.
-    *   Correction of Multi-Index header issues common in financial datasets.
-    *   **Data Leakage Prevention:** The dataset is split using a temporal approach (`shuffle=False`), ensuring the model is strictly trained on past data to predict future data.
+### 1. Solving Non-Stationarity (Feature Engineering)
+One of the biggest pitfalls in Financial ML is training on raw prices (e.g., AAPL at $50 vs $200). Models fail to generalize because the raw numbers change over time.
+*   **Solution:** All features in this model are transformed into **Stationary Ratios, Oscillators, or Distances**.
+*   *Example:* Instead of using `SMA_50 = 150.00`, I used `Dist_SMA_50 = 0.05` (Price is 5% above the average). This allows the model to detect patterns regardless of the absolute stock price.
 
-### 2. Feature Engineering
-The model utilizes technical indicators as features to capture market psychology and momentum:
-*   **RSI (Relative Strength Index):** Measures overbought/oversold conditions.
-*   **MACD (Moving Average Convergence Divergence):** Identifies trend reversals.
-*   **Bollinger Volatility:** Standard deviation of returns to measure market fear.
-*   **SMA/EMA:** Trend confirmation using 10, 12, 26, and 50-day windows.
+### 2. Dynamic Volatility Targeting (Labeling)
+Fixed thresholds (e.g., "Buy if price goes up 2%") fail because market volatility changes.
+*   **Solution:** Targets are generated dynamically using **ATR (Average True Range)**.
+*   **Logic:** `Signal = 1` only if `Future_Return > 1.0 * ATR`.
+*   This ensures the model only attempts to predict moves that are statistically significant relative to the current market "temperature."
 
-### 3. Machine Learning Model
-*   **Algorithm:** Random Forest Classifier.
-*   **Class Imbalance Strategy:** Applied `class_weight='balanced'` to penalize the model for ignoring minority classes (Buy/Sell signals), as financial data is heavily biased toward "Hold" (noise).
-*   **Target Definition:** A signal is generated only if the 5-day future return exceeds a **2% threshold**, filtering out low-profit trades.
+### 3. Walk-Forward Validation
+Standard `train_test_split` is dangerous in time-series data due to lookahead bias and regime changes (e.g., training in a Bull market and testing in a Bear market).
+*   **Solution:** Implemented **TimeSeriesSplit (5 Folds)**.
+*   The model is iteratively trained on a growing window of past data and tested on the immediate future, simulating real-world trading conditions.
+
+## Feature Architecture
+
+The model utilizes 11 engineered features across four categories:
+
+| Category | Indicators | Financial Logic |
+| :--- | :--- | :--- |
+| **Volatility** | `ADX`, `ATR_Perc` | **(Most Predictive)** `ADX` determines if the market is trending or ranging. |
+| **Trend** | `Norm_MACD`, `Dist_SMA_50` | `MACD` normalized by price to capture momentum shifts relative to cost basis. |
+| **Price Action** | `Dist_High_20`, `Dist_Low_20` | Quantifies proximity to Donchian Channel breakouts. |
+| **Momentum** | `RSI`, `OBV_Slope` | Identifies overbought conditions and volume divergence. |
 
 ## Model Performance
-The model was evaluated on unseen test data (the most recent 20% of the timeline).
 
-### Feature Importance
-The analysis reveals that **Volatility** and **RSI** are the dominant predictors, suggesting the algorithm is primarily capitalizing on mean-reversion strategies during high-volatility periods.
+The model was evaluated using Walk-Forward Validation to ensure robustness.
+
+### Feature Importance Analysis
+The Random Forest analysis yields a fascinating insight: **ADX (Trend Strength)** is by far the most dominant feature, followed by Volatility (`ATR_Perc`).
+
+This suggests the model has learned a **"Regime Detection" strategy**. Instead of simply looking at price momentum (like RSI, which ranked low), the model prioritizes *whether a trend exists* (ADX) and the *magnitude of volatility* (ATR) before making a directional prediction.
 
 ![Feature Importance](images/feature_importance.png)
 
-### Confusion Matrix
-The heatmap below visualizes the model's classification accuracy. Note the focus on **Precision** for the "Buy" class (1) to minimize false positives (bad trades).
+### Classification Analysis (Confusion Matrix)
+The confusion matrix highlights a distinct behavior in the model's decision-making:
+
+1.  **Aggressive "Buy" Bias:** The model predicts "Buy" most frequently (right-most column).
+2.  **High Recall (Sensitivity):** It successfully captured 42% of the actual Buy opportunities (True Positives = 49), which is decent for noisy financial data.
+3.  **Low Precision:** However, this aggressiveness leads to false positives. The model often mistakes "Hold" periods for "Buy" signals.
+
+*Interpretation: The model effectively identifies the onset of volatility but struggles to differentiate between a true breakout and a false start during choppy markets.*
 
 ![Confusion Matrix](images/confusion_matrix.png)
 
-## Paper Trading & Validation Strategy
-To validate the model in a live environment without financial risk, I am conducting a forward-test.
+## Forward-Testing & Validation (Paper Trading)
 
-**Methodology:**
-1.  **Daily Execution:** The `predict_live()` function is run every morning before market open.
-2.  **Trade Logging:** Signals are logged in a tracking ledger with Entry Price and Target Date.
-3.  **Exit Strategy:** Positions are closed exactly 5 days later to match the training horizon.
-4.  **Metric:** Win Rate is calculated as `(Profitable Trades / Total Trades)`.
+While historical backtesting provides a theoretical baseline, it often suffers from overfitting. To rigorously test the model's viability, I conducted a **30-day Out-of-Sample Paper Trading** phase.
 
-## Usage
+### Methodology
+1.  **Execution:** The `predict_live()` function was run daily before market open.
+2.  **Logging:** Signals (Buy/Sell/Hold) and Confidence Scores were recorded in an Excel Ledger.
+3.  **Audit:** Entry and Exit prices were logged manually to ensure no "peeking" or data leakage occurred during the process.
 
-1. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
+### Results Ledger
+*The spreadsheet below tracks the Win Rate, Profit/Loss (PnL), and prediction confidence for the validation period.*
 
+![Paper Trading Log](images/paper_trading_log.png)
 
-1.  **Run the Notebook:** Execute stock_classifier.ipynb to retrain the model.
-2.  **Get Live Prediction:** Run the final cell to get today's signal - predict_live("TICKER", model)
-3.  **Disclaimer:** This project is for educational and research purposes only. It does not constitute financial advice.
+## Installation & Usage
+
+1.  **Clone the repo:**
+    ```bash
+    git clone https://github.com/aidankaras/stock-classifier-v2.git
+    ```
+2.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  **Run the analysis:**
+    Open `stock_classifier.ipynb` in Jupyter Lab or VS Code.
+4.  **Live Prediction:**
+    Execute the final cell to fetch live data from Yahoo Finance and generate a prediction for today:
+    ```python
+    predict_live("AAPL", model)
+    ```
+
+## Disclaimer
+This project is for **educational and portfolio purposes only**. It applies Data Science concepts to financial data but is not financial advice. Algorithmic trading involves significant risk.
