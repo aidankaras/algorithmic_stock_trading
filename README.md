@@ -75,23 +75,6 @@ While historical backtesting provides a theoretical baseline, it often suffers f
 
 ![Paper Trading Log](images/paper_trading_log.png)
 
-## Installation & Usage
-
-1.  **Clone the repo:**
-    ```bash
-    git clone https://github.com/aidankaras/stock-classifier-v2.git
-    ```
-2.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  **Run the analysis:**
-    Open `stock_classifier.ipynb` in Jupyter Lab or VS Code.
-4.  **Live Prediction:**
-    Execute the final cell to fetch live data from Yahoo Finance and generate a prediction for today:
-    ```python
-    predict_live("AAPL", model)
-    ```
 
 ## Disclaimer
 This project is for **educational and portfolio purposes only**. It applies Data Science concepts to financial data but is not financial advice. Algorithmic trading involves significant risk.
