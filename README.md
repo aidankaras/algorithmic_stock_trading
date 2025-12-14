@@ -39,27 +39,42 @@ The model utilizes 11 engineered features across four categories:
 | **Price Action** | `Dist_High_20`, `Dist_Low_20` | Quantifies proximity to Donchian Channel breakouts. |
 | **Momentum** | `RSI`, `OBV_Slope` | Identifies overbought conditions and volume divergence. |
 
-## Model Performance
+## Model Performance & Evaluation
 
-The model was evaluated using Walk-Forward Validation to ensure robustness.
+The model was evaluated on a held-out test set (the most recent 15% of data). The results highlight the significant challenge of applying non-linear models to stochastic financial data, particularly when market regimes shift between training and testing periods.
 
 ### Feature Importance Analysis
-The Random Forest analysis yields a fascinating insight: **ADX (Trend Strength)** is by far the most dominant feature, followed by Volatility (`ATR_Perc`).
-
-This suggests the model has learned a **"Regime Detection" strategy**. Instead of simply looking at price momentum (like RSI, which ranked low), the model prioritizes *whether a trend exists* (ADX) and the *magnitude of volatility* (ATR) before making a directional prediction.
+The Random Forest prioritized **Market Structure** over Momentum.
+*   **Top Predictors:** `ADX` (Trend Strength) and `ATR_Perc` (Volatility) were the most influential features.
+*   **Low Importance:** `RSI` and `Body_Perc` (Candlestick shape) had minimal impact.
+*   **Interpretation:** The model attempts to classify "Regimes" (Volatile vs. Calm) rather than predicting directional price momentum.
 
 ![Feature Importance](images/feature_importance.png)
 
-### Classification Analysis (Confusion Matrix)
-The confusion matrix highlights a distinct behavior in the model's decision-making:
+### Performance Metrics (The "Regime Shift" Problem)
+While Walk-Forward Validation during training showed promising stability (~46% accuracy), the model struggled to generalize to the final test set.
 
-1.  **Aggressive "Buy" Bias:** The model predicts "Buy" most frequently (right-most column).
-2.  **High Recall (Sensitivity):** It successfully captured 42% of the actual Buy opportunities (True Positives = 49), which is decent for noisy financial data.
-3.  **Low Precision:** However, this aggressiveness leads to false positives. The model often mistakes "Hold" periods for "Buy" signals.
+| Metric | Score | Analysis |
+| :--- | :--- | :--- |
+| **Accuracy** | 37% | Only slightly above random chance (33%) for a 3-class problem. |
+| **Balanced Accuracy** | 29% | The model struggles to correctly identify minority classes (Buy/Sell). |
+| **Log Loss** | 1.07 | High uncertainty in predictions. |
+| **MCC** | **-0.06** | **Critical Finding:** The negative Matthews Correlation Coefficient indicates a slight inverse correlation. The model learned patterns from the training period that did not persist in the test period (Concept Drift), leading to predictions that were systematically "out of sync" with recent price action.
 
-*Interpretation: The model effectively identifies the onset of volatility but struggles to differentiate between a true breakout and a false start during choppy markets.*
+### Classification Bias (Confusion Matrix)
+The matrix reveals a heavy bias toward the **"Hold" (0)** class.
+*   **Precision (Hold):** 0.56 (The model is safest when predicting no movement).
+*   **Recall (Buy/Sell):** Very low (~0.20). The model fails to "pull the trigger" on trends, often categorizing legitimate moves as noise.
 
 ![Confusion Matrix](images/confusion_matrix.png)
+
+### ROC-AUC Analysis
+The Receiver Operating Characteristic (ROC) curves confirm the findings of the MCC metric.
+
+*   **Observation:** The curves for all three classes (Buy, Sell, Hold) hug the diagonal line (AUC $\approx$ 0.50).
+*   **Interpretation:** An AUC of 0.50 indicates "Random Guessing." This confirms that while the feature engineering (ADX, ATR) worked mathematically, the *signal* found in the training years dissolved in the test year. This is a classic example of **Market Efficiency** absorbing simple technical alphas over time.
+
+![ROC Curve](images/roc_curve.png)
 
 ## Forward-Testing & Validation (Paper Trading)
 
@@ -75,6 +90,6 @@ While historical backtesting provides a theoretical baseline, it often suffers f
 
 ![Paper Trading Log](images/paper_trading_log.png)
 
-
 ## Disclaimer
 This project is for **educational and portfolio purposes only**. It applies Data Science concepts to financial data but is not financial advice. Algorithmic trading involves significant risk.
+```
