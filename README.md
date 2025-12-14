@@ -92,4 +92,3 @@ While historical backtesting provides a theoretical baseline, it often suffers f
 
 ## Disclaimer
 This project is for **educational and portfolio purposes only**. It applies Data Science concepts to financial data but is not financial advice. Algorithmic trading involves significant risk.
-```
