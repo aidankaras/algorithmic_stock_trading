@@ -88,7 +88,7 @@ While historical backtesting provides a theoretical baseline, it often suffers f
 ### Results Ledger
 *The spreadsheet below tracks the Win Rate, Profit/Loss (PnL), and prediction confidence for the validation period.*
 
-![Paper Trading Log](images/Validation Paper Trading - Trade Log.pdf)
+![Paper Trading Log](images/paper_trading_log.png)
 
 ## Disclaimer
 This project is for **educational and portfolio purposes only**. It applies Data Science concepts to financial data but is not financial advice. Algorithmic trading involves significant risk.
