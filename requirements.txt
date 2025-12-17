@@ -1,7 +1,4 @@
 jupyter
 pandas
-numpy
-yfinance
-scikit-learn
-matplotlib
-seaborn
+pandas_ta
+oandapyV20

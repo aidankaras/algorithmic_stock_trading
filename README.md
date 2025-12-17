@@ -1,94 +1,146 @@
-# Advanced Stock Trend Classifier (V2)
+# 📈 VWAP Pullback Intraday Trading Bot (OANDA)
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![Scikit-Learn](https://img.shields.io/badge/Library-Scikit--Learn-orange)
-![Pandas](https://img.shields.io/badge/Library-Pandas-150458)
-![Excel](https://img.shields.io/badge/Tool-Excel_Validation-green)
+A Python-based intraday trading bot that automatically identifies and executes VWAP pullback continuation trades on index CFDs (e.g. S&P 500) using the OANDA v20 API.
 
-## Project Overview
-This project is an advanced Machine Learning pipeline designed to predict short-term market direction. Unlike basic models that rely on raw prices, this V2 iteration focuses on **Statistical Stationarity**, **Dynamic Volatility Targeting**, and **Regime-Adaptive Validation**.
+This project demonstrates:
+- real-time market data ingestion
+- indicator computation
+- rule-based trade signal generation
+- automated order execution with broker-managed risk
 
-The project concludes with a **30-Day Paper Trading experiment**, where model predictions were validated in a live environment using an Excel ledger to audit performance against real-time market data.
+⚠️ FOR EDUCATIONAL AND RESEARCH PURPOSES ONLY  
+This project was created for programming practice and portfolio purposes only.
 
-## Key Data Science Concepts
+---
 
-### 1. Solving Non-Stationarity (Feature Engineering)
-One of the biggest pitfalls in Financial ML is training on raw prices (e.g., AAPL at $50 vs $200). Models fail to generalize because the raw numbers change over time.
-*   **Solution:** All features in this model are transformed into **Stationary Ratios, Oscillators, or Distances**.
-*   *Example:* Instead of using `SMA_50 = 150.00`, I used `Dist_SMA_50 = 0.05` (Price is 5% above the average). This allows the model to detect patterns regardless of the absolute stock price.
+## 🚀 Strategy Overview
 
-### 2. Dynamic Volatility Targeting (Labeling)
-Fixed thresholds (e.g., "Buy if price goes up 2%") fail because market volatility changes.
-*   **Solution:** Targets are generated dynamically using **ATR (Average True Range)**.
-*   **Logic:** `Signal = 1` only if `Future_Return > 1.0 * ATR`.
-*   This ensures the model only attempts to predict moves that are statistically significant relative to the current market "temperature."
+The bot implements a VWAP Pullback Continuation strategy, a widely used intraday framework in professional trading.
 
-### 3. Walk-Forward Validation
-Standard `train_test_split` is dangerous in time-series data due to lookahead bias and regime changes (e.g., training in a Bull market and testing in a Bear market).
-*   **Solution:** Implemented **TimeSeriesSplit (5 Folds)**.
-*   The model is iteratively trained on a growing window of past data and tested on the immediate future, simulating real-world trading conditions.
+### Core Idea
+Trade in the direction of the session bias after a temporary pullback.
 
-## Feature Architecture
+### Long Setup
+- Price above VWAP (bullish bias)
+- Price pulls back below EMA(20)
+- Price reclaims EMA(20)
+- Enter long at market
+- Stop below recent structure
+- Take profit at a fixed risk-reward ratio
 
-The model utilizes 11 engineered features across four categories:
+### Short Setup
+- Price below VWAP (bearish bias)
+- Price pulls back above EMA(20)
+- Price rejects EMA(20)
+- Enter short at market
+- Stop above recent structure
+- Take profit at a fixed risk-reward ratio
 
-| Category | Indicators | Financial Logic |
-| :--- | :--- | :--- |
-| **Volatility** | `ADX`, `ATR_Perc` | **(Most Predictive)** `ADX` determines if the market is trending or ranging. |
-| **Trend** | `Norm_MACD`, `Dist_SMA_50` | `MACD` normalized by price to capture momentum shifts relative to cost basis. |
-| **Price Action** | `Dist_High_20`, `Dist_Low_20` | Quantifies proximity to Donchian Channel breakouts. |
-| **Momentum** | `RSI`, `OBV_Slope` | Identifies overbought conditions and volume divergence. |
+---
 
-## Model Performance & Evaluation
+## 🧠 Indicators Used
 
-The model was evaluated on a held-out test set (the most recent 15% of data). The results highlight the significant challenge of applying non-linear models to stochastic financial data, particularly when market regimes shift between training and testing periods.
+- VWAP (session-reset, price-based)
+- EMA(20) for pullback timing
+- Mid price (bid/ask averaged)
+- Recent structure highs/lows for risk placement
 
-### Feature Importance Analysis
-The Random Forest prioritized **Market Structure** over Momentum.
-*   **Top Predictors:** `ADX` (Trend Strength) and `ATR_Perc` (Volatility) were the most influential features.
-*   **Low Importance:** `RSI` and `Body_Perc` (Candlestick shape) had minimal impact.
-*   **Interpretation:** The model attempts to classify "Regimes" (Volatile vs. Calm) rather than predicting directional price momentum.
+All indicators are computed using pandas and pandas_ta.
 
-![Feature Importance](images/feature_importance.png)
+---
 
-### Performance Metrics (The "Regime Shift" Problem)
-While Walk-Forward Validation during training showed promising stability (~46% accuracy), the model struggled to generalize to the final test set.
+## ⚙️ Features
 
-| Metric | Score | Analysis |
-| :--- | :--- | :--- |
-| **Accuracy** | 37% | Only slightly above random chance (33%) for a 3-class problem. |
-| **Balanced Accuracy** | 29% | The model struggles to correctly identify minority classes (Buy/Sell). |
-| **Log Loss** | 1.07 | High uncertainty in predictions. |
-| **MCC** | **-0.06** | **Critical Finding:** The negative Matthews Correlation Coefficient indicates a slight inverse correlation. The model learned patterns from the training period that did not persist in the test period (Concept Drift), leading to predictions that were systematically "out of sync" with recent price action.
+- Live candle data from OANDA
+- Bid/ask-aware pricing
+- Automated market orders
+- Server-side stop loss and take profit
+- Position check to prevent double entries
+- Configurable timeframe and candle count
+- Clean modular code structure
 
-### Classification Bias (Confusion Matrix)
-The matrix reveals a heavy bias toward the **"Hold" (0)** class.
-*   **Precision (Hold):** 0.56 (The model is safest when predicting no movement).
-*   **Recall (Buy/Sell):** Very low (~0.20). The model fails to "pull the trigger" on trends, often categorizing legitimate moves as noise.
+---
 
-![Confusion Matrix](images/confusion_matrix.png)
+## 🏗 Project Structure
 
-### ROC-AUC Analysis
-The Receiver Operating Characteristic (ROC) curves confirm the findings of the MCC metric.
+    .
+    ├── stock_classifier_v3.ipynb   # Main notebook
+    ├── config_example.py           # Template for API credentials
+    ├── .gitignore                  # Protects secrets
+    ├── README.md                   # Project documentation
 
-*   **Observation:** The curves for all three classes (Buy, Sell, Hold) hug the diagonal line (AUC $\approx$ 0.50).
-*   **Interpretation:** An AUC of 0.50 indicates "Random Guessing." This confirms that while the feature engineering (ADX, ATR) worked mathematically, the *signal* found in the training years dissolved in the test year. This is a classic example of **Market Efficiency** absorbing simple technical alphas over time.
+Note: config.py is intentionally ignored by git and must be created locally.
 
-![ROC Curve](images/roc_curve.png)
+---
 
-## Forward-Testing & Validation (Paper Trading)
+## 🔐 Setup Instructions
 
-While historical backtesting provides a theoretical baseline, it often suffers from overfitting. To rigorously test the model's viability, I conducted a **30-day Out-of-Sample Paper Trading** phase.
+### 1. Clone the repository
 
-### Methodology
-1.  **Execution:** The `predict_live()` function was run daily before market open.
-2.  **Logging:** Signals (Buy/Sell/Hold) and Confidence Scores were recorded in an Excel Ledger.
-3.  **Audit:** Entry and Exit prices were logged manually to ensure no "peeking" or data leakage occurred during the process.
+    git clone https://github.com/aidankaras/algorithmic_stock_trading.git
+    cd algorithmic_stock_trading
 
-### Results Ledger
-*The spreadsheet below tracks the Win Rate, Profit/Loss (PnL), and prediction confidence for the validation period.*
+### 2. Install dependencies
 
-![Paper Trading Log](images/paper_trading_log.png)
+    pip install oandapyV20 pandas pandas_ta
 
-## Disclaimer
-This project is for **educational and portfolio purposes only**. It applies Data Science concepts to financial data but is not financial advice. Algorithmic trading involves significant risk.
+### 3. Create your config file
+
+Create a file named config.py (DO NOT COMMIT THIS FILE):
+
+    OANDA_API_KEY = "YOUR_API_KEY"
+    OANDA_ACCOUNT_ID = "YOUR_ACCOUNT_ID"
+
+Use an OANDA practice account for testing.
+
+---
+
+## ▶️ How to Run
+
+Open the notebook and run cells in order, or call:
+
+    run_bot()
+
+What happens when you run it:
+1. Fetches latest completed candles
+2. Computes indicators
+3. Evaluates the most recent closed candle
+4. If conditions are met and no position is open, places a trade
+5. Exits automatically via stop loss or take profit
+
+---
+
+## 🔄 Trade Lifecycle (Important)
+
+- The bot enters trades automatically
+- The bot does NOT manually exit trades
+- Stop loss and take profit are handled by OANDA
+- Re-running the bot while a position is open will NOT place new trades
+
+---
+
+## ⚠️ Risk Disclaimer
+
+Trading leveraged instruments such as CFDs involves substantial risk and may not be suitable for all investors.
+
+This software:
+- does not guarantee profitability
+- does not account for slippage or extreme volatility
+- is provided as-is, without warranty
+
+You are solely responsible for any trades executed using this code.
+
+---
+
+## 📌 Future Improvements
+
+Planned enhancements:
+- Time-of-day trading filters
+- Trade logging to CSV or database
+- Backtesting framework
+
+---
+
+## 📬 Contact
+
+If you are reviewing this project as part of a portfolio or interview and have questions about the strategy, design choices, or implementation, feel free to reach out.

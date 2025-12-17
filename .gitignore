@@ -1,26 +1,29 @@
-# --- Virtual Environments ---
-.venv/
-venv/
-env/
-ENV/
+# -----------------------------
+# Secrets / credentials
+# -----------------------------
+config.py
+.env
+.venv
+env
+venv
 
-# --- Python ---
+# -----------------------------
+# Python cache
+# -----------------------------
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
 
-# --- Jupyter Notebooks ---
-# Ignores the auto-save backup folders
-.ipynb_checkpoints
+# -----------------------------
+# Jupyter Notebook checkpoints
+# -----------------------------
+.ipynb_checkpoints/
 
-# --- VS Code Settings ---
-.vscode/
-
-# --- Operating System Files ---
+# -----------------------------
+# OS / editor junk
+# -----------------------------
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
 
-# --- Data Files ---
-# *.csv
-# *.xlsx
+
